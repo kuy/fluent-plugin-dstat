@@ -126,7 +126,7 @@ module Fluent
           values = line.split(',')
           values.each_with_index do |v, index|
             key = norm_key("#{@first_keys[index]}_#{@second_keys[index]}")
-            record[key] = v
+            record[key] = v.to_f
           end
           emit_tag = @tag.dup
           filter_record(emit_tag, Engine.now, record)
