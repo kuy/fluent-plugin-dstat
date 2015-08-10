@@ -1,9 +1,9 @@
 require 'fluent/mixin/rewrite_tag_name'
 
 module Fluent
-  class DstatInput < Input
+  class DstatFlattenInput < Input
 
-    Plugin.register_input('dstat', self)
+    Plugin.register_input('dstat_flatten', self)
 
     def initialize
       super
@@ -92,6 +92,10 @@ module Fluent
       end
     end
 
+    def norm_key(raw_key)
+      raw_key.gsub(%r{[/\s]}, '_')
+    end
+
     def receive_lines(lines)
       lines.each do |line|
         next if line == ""
@@ -116,15 +120,14 @@ module Fluent
             @data_array[index][:second] = @second_keys[index]
           end
         else
-          values = line.split(',')
-          data = Hash.new { |hash,key| hash[key] = Hash.new {} }
-          values.each_with_index do |v, index|
-            data[@first_keys[index]][@second_keys[index]] = v
-          end
           record = {
-            'hostname' => @hostname,
-            'dstat' => data
+            'hostname' => @hostname
           }
+          values = line.split(',')
+          values.each_with_index do |v, index|
+            key = norm_key("#{@first_keys[index]}_#{@second_keys[index]}")
+            record[key] = v
+          end
           emit_tag = @tag.dup
           filter_record(emit_tag, Engine.now, record)
           Engine.emit(emit_tag, Engine.now, record)
